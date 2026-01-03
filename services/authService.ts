@@ -32,9 +32,14 @@ export const authService = {
         });
 
         if (error) throw error;
-        if (!data.user) return null;
+        if (!data.user) throw new Error('Authentication failed: No user returned');
 
-        return this.getCurrentUser();
+        const currentUser = await this.getCurrentUser();
+        if (!currentUser) {
+            throw new Error('User authenticated but profile not found. Please ensure the trigger created your profile in the profiles table.');
+        }
+
+        return currentUser;
     },
 
     async signUp(email: string, password: string, name: string): Promise<User | null> {
