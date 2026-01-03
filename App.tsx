@@ -336,6 +336,7 @@ const App: React.FC = () => {
 
             <div className="mt-8 flex gap-4 justify-center">
               <button onClick={() => { setLang(Language.EN); setMobileMenuOpen(false); }} className="text-white border border-white/30 px-3 py-1 rounded">English</button>
+              <button onClick={() => { setLang(Language.FR); setMobileMenuOpen(false); }} className="text-white border border-white/30 px-3 py-1 rounded">Français</button>
               <button onClick={() => { setLang(Language.AR); setMobileMenuOpen(false); }} className="text-white border border-white/30 px-3 py-1 rounded">العربية</button>
             </div>
 
