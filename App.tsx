@@ -101,6 +101,17 @@ const App: React.FC = () => {
           ]);
           setClasses(fetchedClasses);
           setStudents(fetchedStudents);
+
+          // If admin, fetch users map
+          if (auth.currentUser?.role === 'admin') {
+            try {
+              const fetchedUsers = await authService.getAllUsers();
+              setUsers(fetchedUsers);
+            } catch (err) {
+              console.error("Failed to load users:", err);
+            }
+          }
+
           // Subjects are currently static or we can fetch if we add a table
         } catch (error) {
           console.error("Data load error:", error);

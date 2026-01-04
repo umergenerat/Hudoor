@@ -24,6 +24,24 @@ export const dataService = {
         return data;
     },
 
+    async updateClass(id: string, updates: Partial<ClassGroup>): Promise<void> {
+        const { error } = await supabase
+            .from('classes')
+            .update(updates)
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    async deleteClass(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('classes')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
     // Students
     async getStudents(classId?: string): Promise<Student[]> {
         let query = supabase.from('students').select('*');
@@ -74,6 +92,33 @@ export const dataService = {
             absenceCount: data.absence_count,
             parentPhone: data.parent_phone
         } as Student;
+    },
+
+    async updateStudent(id: string, student: Partial<Student>): Promise<void> {
+        const updates: any = {};
+        if (student.firstName) updates.first_name = student.firstName;
+        if (student.lastName) updates.last_name = student.lastName;
+        if (student.studentCode) updates.student_code = student.studentCode;
+        if (student.classId) updates.class_id = student.classId;
+        if (student.parentPhone) updates.parent_phone = student.parentPhone;
+        if (student.riskScore !== undefined) updates.risk_score = student.riskScore;
+        if (student.absenceCount !== undefined) updates.absence_count = student.absenceCount;
+
+        const { error } = await supabase
+            .from('students')
+            .update(updates)
+            .eq('id', id);
+
+        if (error) throw error;
+    },
+
+    async deleteStudent(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('students')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
     },
 
     // Attendance
