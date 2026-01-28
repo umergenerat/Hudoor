@@ -139,5 +139,42 @@ export const dataService = {
             .insert(dbRecords);
 
         if (error) throw error;
+    },
+
+    // Subjects
+    async getSubjects(): Promise<string[]> {
+        const { data, error } = await supabase
+            .from('subjects')
+            .select('name')
+            .order('name');
+
+        if (error) throw error;
+        return (data || []).map(s => s.name);
+    },
+
+    async addSubject(name: string): Promise<void> {
+        const { error } = await supabase
+            .from('subjects')
+            .insert([{ name }]);
+
+        if (error) throw error;
+    },
+
+    async updateSubject(oldName: string, newName: string): Promise<void> {
+        const { error } = await supabase
+            .from('subjects')
+            .update({ name: newName })
+            .eq('name', oldName);
+
+        if (error) throw error;
+    },
+
+    async deleteSubject(name: string): Promise<void> {
+        const { error } = await supabase
+            .from('subjects')
+            .delete()
+            .eq('name', name);
+
+        if (error) throw error;
     }
 };

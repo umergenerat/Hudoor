@@ -387,23 +387,31 @@ const Settings: React.FC<SettingsProps> = ({
 
   // --- Academic Handlers (Subjects) ---
 
-  const handleAddSubject = () => {
+  const handleAddSubject = async () => {
     if (!newSubject.trim()) return;
     const name = newSubject.trim();
     if (subjects.includes(name)) return;
 
-    // Add to string list
-    onUpdateSubjects([...subjects, name]);
+    try {
+      // Add to database
+      await dataService.addSubject(name);
 
-    // Add to config (hours)
-    const hours = parseInt(newSubjectHours) || 30;
-    const newConfigs = { ...localSettings.subjectConfigs, [name]: hours };
-    setLocalSettings(prev => ({ ...prev, subjectConfigs: newConfigs }));
-    // Immediately trigger save for settings to keep subjectConfigs in sync
-    onUpdateAppSettings({ ...localSettings, subjectConfigs: newConfigs });
+      // Update local state
+      onUpdateSubjects([...subjects, name]);
 
-    setNewSubject('');
-    setNewSubjectHours('30');
+      // Add to config (hours)
+      const hours = parseInt(newSubjectHours) || 30;
+      const newConfigs = { ...localSettings.subjectConfigs, [name]: hours };
+      setLocalSettings(prev => ({ ...prev, subjectConfigs: newConfigs }));
+      // Immediately trigger save for settings to keep subjectConfigs in sync
+      onUpdateAppSettings({ ...localSettings, subjectConfigs: newConfigs });
+
+      setNewSubject('');
+      setNewSubjectHours('30');
+    } catch (error) {
+      console.error("Error adding subject:", error);
+      alert(lang === Language.AR ? 'خطأ في إضافة المادة' : 'Error adding subject');
+    }
   };
 
   const handleEditSubject = (subject: string) => {
@@ -417,37 +425,57 @@ const Settings: React.FC<SettingsProps> = ({
     setTempSubjectName('');
   };
 
-  const handleSaveSubjectEdit = () => {
+  const handleSaveSubjectEdit = async () => {
     if (!editingSubjectOriginal || !tempSubjectName.trim()) return;
 
     const newName = tempSubjectName.trim();
-    // Update Name List
-    const updatedSubjects = subjects.map(s => s === editingSubjectOriginal ? newName : s);
-    onUpdateSubjects(updatedSubjects);
 
-    // Update Hours Config (Remove old key, add new key)
-    const newConfigs = { ...localSettings.subjectConfigs };
-    if (newName !== editingSubjectOriginal) {
-      delete newConfigs[editingSubjectOriginal];
+    try {
+      // Update in database if name changed
+      if (newName !== editingSubjectOriginal) {
+        await dataService.updateSubject(editingSubjectOriginal, newName);
+      }
+
+      // Update Name List
+      const updatedSubjects = subjects.map(s => s === editingSubjectOriginal ? newName : s);
+      onUpdateSubjects(updatedSubjects);
+
+      // Update Hours Config (Remove old key, add new key)
+      const newConfigs = { ...localSettings.subjectConfigs };
+      if (newName !== editingSubjectOriginal) {
+        delete newConfigs[editingSubjectOriginal];
+      }
+      newConfigs[newName] = tempSubjectHours;
+      setLocalSettings(prev => ({ ...prev, subjectConfigs: newConfigs }));
+      onUpdateAppSettings({ ...localSettings, subjectConfigs: newConfigs });
+
+      setEditingSubjectOriginal(null);
+      setTempSubjectName('');
+    } catch (error) {
+      console.error("Error updating subject:", error);
+      alert(lang === Language.AR ? 'خطأ في تحديث المادة' : 'Error updating subject');
     }
-    newConfigs[newName] = tempSubjectHours;
-    setLocalSettings(prev => ({ ...prev, subjectConfigs: newConfigs }));
-    onUpdateAppSettings({ ...localSettings, subjectConfigs: newConfigs });
-
-    setEditingSubjectOriginal(null);
-    setTempSubjectName('');
   };
 
   const handleDeleteSubject = (subject: string) => {
     openConfirm(
       lang === Language.AR ? 'حذف المادة' : 'Delete Subject',
       lang === Language.AR ? 'هل أنت متأكد من حذف هذه المادة؟' : 'Are you sure you want to delete this subject?',
-      () => {
-        onUpdateSubjects(subjects.filter(s => s !== subject));
-        const newConfigs = { ...localSettings.subjectConfigs };
-        delete newConfigs[subject];
-        setLocalSettings(prev => ({ ...prev, subjectConfigs: newConfigs }));
-        onUpdateAppSettings({ ...localSettings, subjectConfigs: newConfigs });
+      async () => {
+        try {
+          // Delete from database
+          await dataService.deleteSubject(subject);
+
+          // Update local state
+          onUpdateSubjects(subjects.filter(s => s !== subject));
+          const newConfigs = { ...localSettings.subjectConfigs };
+          delete newConfigs[subject];
+          setLocalSettings(prev => ({ ...prev, subjectConfigs: newConfigs }));
+          onUpdateAppSettings({ ...localSettings, subjectConfigs: newConfigs });
+        } catch (error) {
+          console.error("Error deleting subject:", error);
+          alert(lang === Language.AR ? 'خطأ في حذف المادة' : 'Error deleting subject');
+        }
       }
     );
   };

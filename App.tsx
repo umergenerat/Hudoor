@@ -95,12 +95,14 @@ const App: React.FC = () => {
     if (auth.isAuthenticated) {
       const loadData = async () => {
         try {
-          const [fetchedClasses, fetchedStudents] = await Promise.all([
+          const [fetchedClasses, fetchedStudents, fetchedSubjects] = await Promise.all([
             dataService.getClasses(),
-            dataService.getStudents()
+            dataService.getStudents(),
+            dataService.getSubjects()
           ]);
           setClasses(fetchedClasses);
           setStudents(fetchedStudents);
+          setSubjects(fetchedSubjects);
 
           // If admin, fetch users map
           if (auth.currentUser?.role === 'admin') {
@@ -111,8 +113,6 @@ const App: React.FC = () => {
               console.error("Failed to load users:", err);
             }
           }
-
-          // Subjects are currently static or we can fetch if we add a table
         } catch (error) {
           console.error("Data load error:", error);
         }
