@@ -25,10 +25,26 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
       if (user) {
         onLogin(user);
       } else {
-        setError('Invalid credentials. Please check your email or password.');
+        setError(window.location.search.includes('lang=ar') || document.documentElement.dir === 'rtl'
+          ? 'بيانات الاعتماد غير صالحة. يرجى التحقق من البريد الإلكتروني أو كلمة المرور.'
+          : 'Invalid credentials. Please check your email or password.');
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign in.');
+      console.error("Login error:", err);
+      let msg = err.message || 'An error occurred during sign in.';
+
+      // Handle the common "Email not confirmed" error from Supabase
+      if (msg.includes('Email not confirmed')) {
+        msg = (window.location.search.includes('lang=ar') || document.documentElement.dir === 'rtl')
+          ? 'لم يتم تأكيد البريد الإلكتروني بعد. يرجى التحقق من الرسائل أو اطلب من المدير تفعيل حسابك.'
+          : 'Email not confirmed. Please check your inbox or ask the administrator to confirm your account.';
+      } else if (msg.includes('Invalid login credentials')) {
+        msg = (window.location.search.includes('lang=ar') || document.documentElement.dir === 'rtl')
+          ? 'خطأ في البريد الإلكتروني أو كلمة المرور.'
+          : 'Invalid email or password.';
+      }
+
+      setError(msg);
     } finally {
       setLoading(false);
     }
