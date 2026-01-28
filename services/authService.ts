@@ -5,15 +5,26 @@ import { User, UserRole } from '../types';
 export const authService = {
     async getCurrentUser(): Promise<User | null> {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
+        if (!user) {
+            console.log("No authenticated user found in auth.getUser()");
+            return null;
+        }
 
-        const { data: profile } = await supabase
+        const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', user.id)
             .single();
 
-        if (!profile) return null;
+        if (error) {
+            console.error("Error fetching profile for user:", user.id, error);
+            return null;
+        }
+
+        if (!profile) {
+            console.warn("Profile record not found for user ID:", user.id);
+            return null;
+        }
 
         return {
             id: user.id,
@@ -32,8 +43,14 @@ export const authService = {
             password,
         });
 
-        if (error) throw error;
-        if (!data.user) throw new Error('Authentication failed: No user returned');
+        if (error) {
+            console.error("Supabase Auth signIn error:", error);
+            throw error;
+        }
+        if (!data.user) {
+            console.error("Auth signin succeeded but no user returned");
+            throw new Error('Authentication failed: No user returned');
+        }
 
         const currentUser = await this.getCurrentUser();
         if (!currentUser) {
