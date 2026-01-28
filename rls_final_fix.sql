@@ -1,53 +1,59 @@
--- RESET AND FIX RLS POLICIES FOR PROFILES
--- This script fixes the recursive policy issue that prevents login.
+-- ROBUST RESET AND FIX FOR PROFILES RLS
+-- This script uses a SECURITY DEFINER function to avoid recursion and repairs the admin profile.
 
--- 1. Disable RLS temporarily to ensure we can reset (Optional but safe)
--- ALTER TABLE public.profiles DISABLE ROW LEVEL SECURITY;
+-- 1. Create a security definer function to check admin role without recursion
+-- This function runs with the privileges of the owner, bypassing RLS inside its own body.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN (
+    SELECT (role = 'admin')
+    FROM public.profiles
+    WHERE id = auth.uid()
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 2. Drop existing problematic policies
-DROP POLICY IF EXISTS "Profile selection policy" ON public.profiles;
+-- 2. Reset policies for profiles table
 DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
-DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can update any profile" ON public.profiles;
 DROP POLICY IF EXISTS "Admins can delete profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Profile selection policy" ON public.profiles;
 
--- 3. Create clean, non-recursive SELECT policies
-
--- Policy: Authenticated users can ALWAYS read their own profile
+-- 3. Create non-recursive policies
+-- Users view own info
 CREATE POLICY "Users can view their own profile" ON public.profiles
   FOR SELECT USING (auth.uid() = id);
 
--- Policy: Admins can view all profiles
--- To avoid recursion (checking role by selecting from the same table in the policy),
--- we use a check that doesn't involve a recursive SELECT if possible.
--- A common trick in Supabase is to check if the user HAS the admin role in the profiles table
--- but using a subquery that is restricted or using auth.jwt() if it contains the role.
--- Since our role is ONLY in the profiles table, we'll use a direct check:
+-- Admins view all (uses the secure function)
 CREATE POLICY "Admins can view all profiles" ON public.profiles
-  FOR SELECT USING (
-    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
-  );
+  FOR SELECT USING (is_admin());
 
--- 4. Create UPDATE policies
+-- Users update own info
 CREATE POLICY "Users can update their own profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
 
+-- Admins update all
 CREATE POLICY "Admins can update any profile" ON public.profiles
-  FOR UPDATE USING (
-    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
-  );
+  FOR UPDATE USING (is_admin());
 
--- 5. Create DELETE policies
+-- Admins delete
 CREATE POLICY "Admins can delete profiles" ON public.profiles
-  FOR DELETE USING (
-    (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'admin'
-  );
+  FOR DELETE USING (is_admin());
 
--- 6. Enable RLS (Ensure it's on)
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+-- 4. MANUALLY REPAIR/CREATE THE ADMIN PROFILE
+-- This ensures that your email has a valid admin profile in the profiles table.
+-- Replace 'aomloutou@gmail.com' if your email in Supabase is different.
+INSERT INTO public.profiles (id, display_name, role)
+SELECT id, COALESCE(raw_user_meta_data->>'full_name', email), 'admin'
+FROM auth.users
+WHERE email = 'aomloutou@gmail.com'
+ON CONFLICT (id) DO UPDATE SET role = 'admin';
 
--- IMPORTANT: If you still face issues, run this to allow simple read access to all profiles for authenticated users temporarily:
--- CREATE POLICY "Temp allow read all" ON public.profiles FOR SELECT USING (auth.uid() IS NOT NULL);
+-- 5. VERIFY Data exists (Check the Result tab after running)
+-- This query will show your profile if it was successfully created/updated.
+SELECT * FROM public.profiles WHERE id = (SELECT id FROM auth.users WHERE email = 'aomloutou@gmail.com');
 
--- DONE. Execute this in Supabase SQL Editor.
+-- DONE. Copy and Run this in Supabase SQL Editor.
