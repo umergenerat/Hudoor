@@ -42,6 +42,26 @@ export const dataService = {
         if (error) throw error;
     },
 
+    async bulkAddClasses(classes: Omit<ClassGroup, 'id'>[]): Promise<ClassGroup[]> {
+        const { data, error } = await supabase
+            .from('classes')
+            .insert(classes)
+            .select();
+
+        if (error) throw error;
+        return data || [];
+    },
+
+    async getClassesByNames(names: string[]): Promise<ClassGroup[]> {
+        const { data, error } = await supabase
+            .from('classes')
+            .select('*')
+            .in('name', names);
+
+        if (error) throw error;
+        return data || [];
+    },
+
     // Students
     async getStudents(classId?: string): Promise<Student[]> {
         let query = supabase.from('students').select('*');
@@ -110,6 +130,35 @@ export const dataService = {
             .eq('id', id);
 
         if (error) throw error;
+    },
+
+    async bulkAddStudents(students: Omit<Student, 'id'>[]): Promise<Student[]> {
+        const dbStudents = students.map(s => ({
+            first_name: s.firstName,
+            last_name: s.lastName,
+            student_code: s.studentCode,
+            class_id: s.classId,
+            parent_phone: s.parentPhone,
+            risk_score: s.riskScore || 0,
+            absence_count: s.absenceCount || 0
+        }));
+
+        const { data, error } = await supabase
+            .from('students')
+            .insert(dbStudents)
+            .select();
+
+        if (error) throw error;
+        return (data || []).map(s => ({
+            id: s.id,
+            firstName: s.first_name,
+            lastName: s.last_name,
+            studentCode: s.student_code,
+            classId: s.class_id,
+            riskScore: s.risk_score,
+            absenceCount: s.absence_count,
+            parentPhone: s.parent_phone
+        }));
     },
 
     async deleteStudent(id: string): Promise<void> {

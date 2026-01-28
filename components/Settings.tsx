@@ -115,6 +115,7 @@ const Settings: React.FC<SettingsProps> = ({
   const [reviewMode, setReviewMode] = useState(false);
   const [importedStudents, setImportedStudents] = useState<Student[]>([]);
   const [importedClasses, setImportedClasses] = useState<ClassGroup[]>([]);
+  const [isConfirmingImport, setIsConfirmingImport] = useState(false);
   const [filterText, setFilterText] = useState('');
 
   // Registry Management State
@@ -608,16 +609,19 @@ const Settings: React.FC<SettingsProps> = ({
           jsonData.forEach((row: any) => {
             const firstName = row['FirstName'] || row['First Name'] || row['الاسم'] || row['Prénom'] || 'Unknown';
             const lastName = row['LastName'] || row['Last Name'] || row['النسب'] || row['Nom'] || 'Unknown';
-            const code = row['Code'] || row['ID'] || row['رقم'] || `ST-${Math.floor(Math.random() * 10000)}`;
+            const code = row['Code'] || row['ID'] || row['رقم'] || '';
             const className = row['Class'] || row['Group'] || row['القسم'] || row['Classe'] || 'General';
             const phone = row['Phone'] || row['Mobile'] || row['الهاتف'] || row['Tél'] || '';
-            const classId = `cls-${className.replace(/\s/g, '-')}`;
-            if (!parsedClassesMap.has(classId)) {
-              parsedClassesMap.set(classId, { id: classId, name: className, grade: '10' });
+
+            // Link to class via a normalized temp ID
+            const tempClassId = `temp-cls-${className.replace(/\s/g, '-').toLowerCase()}`;
+            if (!parsedClassesMap.has(tempClassId)) {
+              parsedClassesMap.set(tempClassId, { id: tempClassId, name: className, grade: 'General' });
             }
+
             parsedStudents.push({
-              id: Math.random().toString(36).substr(2, 9),
-              firstName, lastName, studentCode: code, classId: classId, riskScore: 0, absenceCount: 0, parentPhone: phone
+              id: `temp-st-${Math.random().toString(36).substr(2, 9)}`,
+              firstName, lastName, studentCode: code, classId: tempClassId, riskScore: 0, absenceCount: 0, parentPhone: phone
             });
           });
           prepareReviewData(parsedStudents, Array.from(parsedClassesMap.values()));
@@ -642,16 +646,24 @@ const Settings: React.FC<SettingsProps> = ({
           if (!line) continue;
           const cols = line.split(',').map(s => s.trim());
           const [firstName, lastName, studentCode, className, phone] = cols;
-          if (!firstName) continue;
-          const classId = `cls-${(className || 'General').replace(/\s/g, '-')}`;
+          if (!firstName && !lastName) continue;
+
+          const finalClassName = className || 'General';
+          const tempClassId = `temp-cls-${finalClassName.replace(/\s/g, '-').toLowerCase()}`;
+
           parsedStudents.push({
-            id: Math.random().toString(36).substr(2, 9),
-            firstName: firstName || 'Unknown', lastName: lastName || 'Unknown',
-            studentCode: studentCode || `ST-${Math.floor(Math.random() * 1000)}`,
-            classId: classId, riskScore: 0, absenceCount: 0, parentPhone: phone || ''
+            id: `temp-st-${Math.random().toString(36).substr(2, 9)}`,
+            firstName: firstName || 'Unknown',
+            lastName: lastName || 'Unknown',
+            studentCode: studentCode || '',
+            classId: tempClassId,
+            riskScore: 0,
+            absenceCount: 0,
+            parentPhone: phone || ''
           });
-          if (!parsedClassesMap.has(classId)) {
-            parsedClassesMap.set(classId, { id: classId, name: className || 'General', grade: 'General' });
+
+          if (!parsedClassesMap.has(tempClassId)) {
+            parsedClassesMap.set(tempClassId, { id: tempClassId, name: finalClassName, grade: 'General' });
           }
         }
         prepareReviewData(parsedStudents, Array.from(parsedClassesMap.values()));
@@ -700,27 +712,90 @@ const Settings: React.FC<SettingsProps> = ({
 
     const data = await parseStudentList(base64Data, mimeType, appSettings.apiKey);
 
-    const newClassId = `c-${Math.random().toString(36).substr(2, 6)}`;
-    const newClass: ClassGroup = { id: newClassId, name: data.className || 'Imported Class', grade: data.grade || 'General' };
+    const className = data.className || 'Imported Class';
+    const tempClassId = `temp-cls-${className.replace(/\s/g, '-').toLowerCase()}`;
+    const newClass: ClassGroup = { id: tempClassId, name: className, grade: data.grade || 'General' };
+
     const newStudents: Student[] = data.students.map(s => ({
-      id: Math.random().toString(36).substr(2, 9),
-      firstName: s.firstName, lastName: s.lastName,
-      studentCode: s.studentCode || `ST-${Math.floor(Math.random() * 1000)}`,
-      classId: newClassId, riskScore: 0, absenceCount: 0
+      id: `temp-st-${Math.random().toString(36).substr(2, 9)}`,
+      firstName: s.firstName,
+      lastName: s.lastName,
+      studentCode: s.studentCode || '',
+      classId: tempClassId,
+      riskScore: 0,
+      absenceCount: 0
     }));
     prepareReviewData(newStudents, [newClass]);
   };
 
-  const handleConfirmImport = () => {
-    onUpdateStudents([...students, ...importedStudents]);
-    const existingClassIds = new Set(classes.map(c => c.id));
-    const classesToAdd = importedClasses.filter(c => !existingClassIds.has(c.id));
-    if (classesToAdd.length > 0) onUpdateClasses([...classes, ...classesToAdd]);
-    setReviewMode(false);
-    setImportedStudents([]);
-    setImportedClasses([]);
-    setManageMode('registry');
-    alert(lang === Language.AR ? `تم حفظ البيانات بنجاح` : `Data saved successfully.`);
+  const handleConfirmImport = async () => {
+    if (isConfirmingImport) return;
+    setIsConfirmingImport(true);
+
+    try {
+      // 1. Get existing classes names map to avoid duplicates
+      const existingClassesNames = new Map<string, string>(classes.map(c => [c.name.toLowerCase(), c.id]));
+
+      // 2. Identify new classes to add
+      const classesToAdd: Omit<ClassGroup, 'id'>[] = [];
+      const classIdMap: Record<string, string> = {}; // tempId -> dbId
+
+      importedClasses.forEach(cls => {
+        const lowerName = cls.name.toLowerCase();
+        if (existingClassesNames.has(lowerName)) {
+          classIdMap[cls.id] = existingClassesNames.get(lowerName) as string;
+        } else {
+          classesToAdd.push({ name: cls.name, grade: cls.grade });
+        }
+      });
+
+      // 3. Save new classes to DB
+      let finalClasses = [...classes];
+      if (classesToAdd.length > 0) {
+        const savedClasses = await dataService.bulkAddClasses(classesToAdd);
+        savedClasses.forEach(cls => {
+          // Map by name since we don't have temp IDs for new ones yet (they were created in the processor)
+          // Actually, let's refine this: the processor assigns temp IDs starting with 'cls-'
+          const tempCls = importedClasses.find(ic => ic.name === cls.name);
+          if (tempCls) classIdMap[tempCls.id] = cls.id;
+        });
+        finalClasses = [...classes, ...savedClasses];
+        onUpdateClasses(finalClasses);
+      }
+
+      // 4. Prepare students for persistence
+      const studentsToPersist: Omit<Student, 'id'>[] = importedStudents.map(s => {
+        const dbClassId = classIdMap[s.classId];
+        if (!dbClassId) {
+          console.warn(`Class mapping failed for student ${s.firstName} ${s.lastName}. Using first available class or general.`);
+        }
+        return {
+          firstName: s.firstName,
+          lastName: s.lastName,
+          studentCode: s.studentCode || `ST-${Math.floor(Math.random() * 10000)}`,
+          classId: dbClassId || classes[0]?.id || '',
+          parentPhone: s.parentPhone || '',
+          riskScore: 0,
+          absenceCount: 0
+        };
+      });
+
+      // 5. Save students to DB
+      const savedStudents = await dataService.bulkAddStudents(studentsToPersist);
+      onUpdateStudents([...students, ...savedStudents]);
+
+      // 6. Cleanup
+      setReviewMode(false);
+      setImportedStudents([]);
+      setImportedClasses([]);
+      setManageMode('registry');
+      alert(lang === Language.AR ? `تم حفظ البيانات بنجاح: ${savedStudents.length} تلميذ` : `Data saved successfully: ${savedStudents.length} students`);
+    } catch (error: any) {
+      console.error("Error during import confirmation:", error);
+      alert(lang === Language.AR ? `خطأ في حفظ البيانات: ${error.message}` : `Error saving data: ${error.message}`);
+    } finally {
+      setIsConfirmingImport(false);
+    }
   };
 
   const filteredImportedStudents = useMemo(() => {

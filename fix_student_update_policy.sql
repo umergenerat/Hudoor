@@ -11,10 +11,15 @@ CREATE POLICY "Users can update students" ON public.students
     EXISTS (
       SELECT 1 
       FROM public.profiles 
-      WHERE id = auth.uid() 
+      WHERE profiles.id = auth.uid() 
       AND (
-        role = 'admin' 
+        profiles.role = 'admin' 
         OR students.class_id = ANY(profiles.assigned_class_ids)
+        OR EXISTS (
+          SELECT 1 FROM public.classes 
+          WHERE classes.id = students.class_id 
+          AND classes.created_by = auth.uid()
+        )
       )
     )
   );
