@@ -61,6 +61,32 @@ const resizeImage = (file: File): Promise<string> => {
   });
 };
 
+// Helper: Download Template
+const downloadTemplate = async (lang: Language) => {
+  try {
+    const module = await import('xlsx');
+    const XLSX = module.default || module;
+
+    // Define headers based on language
+    let headers = [];
+    if (lang === Language.AR) {
+      headers = ['الاسم', 'النسب', 'رقم', 'القسم', 'الهاتف'];
+    } else if (lang === Language.FR) {
+      headers = ['Prénom', 'Nom', 'Code', 'Classe', 'Tél'];
+    } else {
+      headers = ['FirstName', 'LastName', 'ID', 'Class', 'Phone'];
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Students");
+    XLSX.writeFile(wb, "student_import_template.xlsx");
+  } catch (error) {
+    console.error("Failed to download template", error);
+    alert("Error downloading template");
+  }
+};
+
 const Settings: React.FC<SettingsProps> = ({
   lang, students, classes, subjects, appSettings, users = [], currentUser,
   onUpdateStudents, onUpdateClasses, onUpdateSubjects, onUpdateAppSettings, onUpdateUsers
@@ -1187,6 +1213,15 @@ const Settings: React.FC<SettingsProps> = ({
                       <button className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold pointer-events-none">Browse Files</button>
                     </>
                   )}
+                </div>
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => downloadTemplate(lang)}
+                    className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-bold text-sm px-4 py-2 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                  >
+                    <Download size={16} />
+                    {lang === Language.AR ? 'تحميل نموذج Excel' : 'Download Excel Template'}
+                  </button>
                 </div>
               </div>
             )}
