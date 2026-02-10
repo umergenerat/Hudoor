@@ -105,6 +105,31 @@ const Login: React.FC<LoginProps> = ({ users, onLogin }) => {
             </div>
           </div>
 
+          <div className="flex justify-end relative z-20">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  setError('Please enter your email first.');
+                  return;
+                }
+                try {
+                  setLoading(true);
+                  await authService.resetPasswordForEmail(email);
+                  alert('Password reset email sent! Please check your inbox.');
+                } catch (err: any) {
+                  console.error(err);
+                  setError(err.message || 'Failed to send reset email.');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors"
+            >
+              Forgot Password?
+            </button>
+          </div>
+
           <button
             type="submit"
             disabled={loading}

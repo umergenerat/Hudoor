@@ -107,6 +107,13 @@ export const authService = {
         }
     },
 
+    async resetPasswordForEmail(email: string): Promise<void> {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+    },
+
     // --- Admin User Management ---
 
     async getAllUsers(): Promise<User[]> {
