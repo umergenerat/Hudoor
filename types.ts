@@ -47,6 +47,14 @@ export interface Student {
   riskScore: number; // 0-100
   absenceCount: number;
   parentPhone?: string; // Added for contact
+  nationalId?: string;
+  firstNameAr?: string;
+  lastNameAr?: string;
+  gender?: string;
+  trainingLevel?: string;
+  trainingType?: string;
+  stream?: string;
+  cef?: string;
 }
 
 export interface ClassGroup {

@@ -80,7 +80,17 @@ export const dataService = {
             classId: s.class_id,
             riskScore: s.risk_score,
             absenceCount: s.absence_count,
-            parentPhone: s.parent_phone
+
+
+            parentPhone: s.parent_phone,
+            nationalId: s.national_id,
+            firstNameAr: s.first_name_ar,
+            lastNameAr: s.last_name_ar,
+            gender: s.gender,
+            trainingLevel: s.training_level,
+            trainingType: s.training_type,
+            stream: s.stream,
+            cef: s.cef
         }));
     },
 
@@ -92,7 +102,16 @@ export const dataService = {
             class_id: student.classId,
             parent_phone: student.parentPhone,
             risk_score: student.riskScore,
-            absence_count: student.absenceCount
+
+            absence_count: student.absenceCount,
+            national_id: student.nationalId,
+            first_name_ar: student.firstNameAr,
+            last_name_ar: student.lastNameAr,
+            gender: student.gender,
+            training_level: student.trainingLevel,
+            training_type: student.trainingType,
+            stream: student.stream,
+            cef: student.cef
         };
 
         const { data, error } = await supabase
@@ -107,10 +126,17 @@ export const dataService = {
             firstName: data.first_name,
             lastName: data.last_name,
             studentCode: data.student_code,
-            classId: data.class_id,
             riskScore: data.risk_score,
             absenceCount: data.absence_count,
-            parentPhone: data.parent_phone
+            parentPhone: data.parent_phone,
+            nationalId: data.national_id,
+            firstNameAr: data.first_name_ar,
+            lastNameAr: data.last_name_ar,
+            gender: data.gender,
+            trainingLevel: data.training_level,
+            trainingType: data.training_type,
+            stream: data.stream,
+            cef: data.cef
         } as Student;
     },
 
@@ -123,6 +149,14 @@ export const dataService = {
         if (student.parentPhone) updates.parent_phone = student.parentPhone;
         if (student.riskScore !== undefined) updates.risk_score = student.riskScore;
         if (student.absenceCount !== undefined) updates.absence_count = student.absenceCount;
+        if (student.nationalId) updates.national_id = student.nationalId;
+        if (student.firstNameAr) updates.first_name_ar = student.firstNameAr;
+        if (student.lastNameAr) updates.last_name_ar = student.lastNameAr;
+        if (student.gender) updates.gender = student.gender;
+        if (student.trainingLevel) updates.training_level = student.trainingLevel;
+        if (student.trainingType) updates.training_type = student.trainingType;
+        if (student.stream) updates.stream = student.stream;
+        if (student.cef) updates.cef = student.cef;
 
         const { error } = await supabase
             .from('students')
@@ -140,7 +174,16 @@ export const dataService = {
             class_id: s.classId,
             parent_phone: s.parentPhone,
             risk_score: s.riskScore || 0,
-            absence_count: s.absenceCount || 0
+
+            absence_count: s.absenceCount || 0,
+            national_id: s.nationalId,
+            first_name_ar: s.firstNameAr,
+            last_name_ar: s.lastNameAr,
+            gender: s.gender,
+            training_level: s.trainingLevel,
+            training_type: s.trainingType,
+            stream: s.stream,
+            cef: s.cef
         }));
 
         const { data, error } = await supabase
@@ -157,7 +200,17 @@ export const dataService = {
             classId: s.class_id,
             riskScore: s.risk_score,
             absenceCount: s.absence_count,
-            parentPhone: s.parent_phone
+
+
+            parentPhone: s.parent_phone,
+            nationalId: s.national_id,
+            firstNameAr: s.first_name_ar,
+            lastNameAr: s.last_name_ar,
+            gender: s.gender,
+            trainingLevel: s.training_level,
+            trainingType: s.training_type,
+            stream: s.stream,
+            cef: s.cef
         }));
     },
 

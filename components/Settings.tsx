@@ -69,13 +69,22 @@ const downloadTemplate = async (lang: Language) => {
 
     // Define headers based on language
     let headers = [];
-    if (lang === Language.AR) {
-      headers = ['الاسم', 'النسب', 'رقم', 'القسم', 'الهاتف'];
-    } else if (lang === Language.FR) {
-      headers = ['Prénom', 'Nom', 'Code', 'Classe', 'Tél'];
-    } else {
-      headers = ['FirstName', 'LastName', 'ID', 'Class', 'Phone'];
-    }
+    // Use standard headers from user requirements regardless of interface language
+    // "Niveau de formation", "Type de formation", "Filière", "CEF", "Nom", "Prénom", "Sexe", "Groupe", "CIN", "Téléphone", "Nom Arabe", "Prénom Arabe"
+    headers = [
+      'Niveau de formation',
+      'Type de formation',
+      'Filière',
+      'CEF',
+      'Nom',
+      'Prénom',
+      'Sexe',
+      'Groupe',
+      'CIN',
+      'Téléphone',
+      'Nom Arabe',
+      'Prénom Arabe'
+    ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers]);
     const wb = XLSX.utils.book_new();
@@ -633,21 +642,43 @@ const Settings: React.FC<SettingsProps> = ({
           const parsedStudents: Student[] = [];
           const parsedClassesMap = new Map<string, ClassGroup>();
           jsonData.forEach((row: any) => {
-            const firstName = row['FirstName'] || row['First Name'] || row['الاسم'] || row['Prénom'] || 'Unknown';
-            const lastName = row['LastName'] || row['Last Name'] || row['النسب'] || row['Nom'] || 'Unknown';
-            const code = row['Code'] || row['ID'] || row['رقم'] || '';
-            const className = row['Class'] || row['Group'] || row['القسم'] || row['Classe'] || 'General';
-            const phone = row['Phone'] || row['Mobile'] || row['الهاتف'] || row['Tél'] || '';
+            // New columns mapping
+            const trainingLevel = row['Niveau de formation'] || '';
+            const trainingType = row['Type de formation'] || '';
+            const stream = row['Filière'] || '';
+            const cef = row['CEF'] || '';
+            const lastName = row['Nom'] || row['LastName'] || row['النسب'] || 'Unknown';
+            const firstName = row['Prénom'] || row['FirstName'] || row['الاسم'] || 'Unknown';
+            const gender = row['Sexe'] || '';
+            const className = row['Groupe'] || row['Class'] || row['القسم'] || 'General';
+            const nationalId = row['CIN'] || row['ID'] || '';
+            const phone = row['Téléphone'] || row['Phone'] || row['الهاتف'] || '';
+            const lastNameAr = row['Nom Arabe'] || '';
+            const firstNameAr = row['Prénom Arabe'] || '';
 
             // Link to class via a normalized temp ID
             const tempClassId = `temp-cls-${className.replace(/\s/g, '-').toLowerCase()}`;
             if (!parsedClassesMap.has(tempClassId)) {
-              parsedClassesMap.set(tempClassId, { id: tempClassId, name: className, grade: 'General' });
+              parsedClassesMap.set(tempClassId, { id: tempClassId, name: className, grade: trainingLevel || 'General' });
             }
 
             parsedStudents.push({
               id: `temp-st-${Math.random().toString(36).substr(2, 9)}`,
-              firstName, lastName, studentCode: code, classId: tempClassId, riskScore: 0, absenceCount: 0, parentPhone: phone
+              firstName,
+              lastName,
+              studentCode: nationalId, // Use CIN as student code if provided
+              classId: tempClassId,
+              riskScore: 0,
+              absenceCount: 0,
+              parentPhone: phone,
+              nationalId,
+              firstNameAr,
+              lastNameAr,
+              gender,
+              trainingLevel,
+              trainingType,
+              stream,
+              cef
             });
           });
           prepareReviewData(parsedStudents, Array.from(parsedClassesMap.values()));
