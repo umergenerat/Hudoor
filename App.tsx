@@ -438,7 +438,52 @@ const App: React.FC = () => {
           </header>
 
           <div className="animate-fade-in">
+            {currentView === 'dashboard' && (
+              <Dashboard
+                lang={lang}
+                students={students}
+                attendanceHistory={attendanceHistory}
+                classes={classes}
+                appSettings={appSettings}
+                onDeleteRecord={async (recordId) => {
+                  try {
+                    await dataService.deleteAttendanceRecord(recordId);
+                    setAttendanceHistory(prev => {
+                      const updated = prev.filter(r => r.id !== recordId);
+                      setTimeout(() => updateStudentStats(updated), 0);
+                      return updated;
+                    });
+                  } catch (e) {
+                    console.error("Delete failed", e);
+                    alert("Failed to delete record");
+                  }
+                }}
+                onUpdateRecord={async (recordId, newStatus) => {
+                  try {
+                    const existing = attendanceHistory.find(r => r.id === recordId);
+                    if (!existing) return;
 
+                    const updatedRecord: AttendanceRecord = {
+                      ...existing,
+                      status: newStatus,
+                      minutesLate: newStatus === AttendanceStatus.LATE ? (existing.minutesLate || 15) : 0
+                    };
+
+                    await dataService.saveAttendanceRecords([updatedRecord]);
+
+                    setAttendanceHistory(prev => {
+                      const updated = prev.map(r => r.id === recordId ? updatedRecord : r);
+                      setTimeout(() => updateStudentStats(updated), 0);
+                      return updated;
+                    });
+
+                  } catch (e) {
+                    console.error("Update failed", e);
+                    alert("Failed to update record");
+                  }
+                }}
+              />
+            )}
 
             {currentView === 'attendance' && (
               <AttendanceSheet
