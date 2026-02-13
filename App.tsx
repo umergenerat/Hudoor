@@ -95,16 +95,43 @@ const App: React.FC = () => {
     if (auth.isAuthenticated) {
       const loadData = async () => {
         try {
-          const [fetchedClasses, fetchedStudents, fetchedSubjects, fetchedSettings] = await Promise.all([
+          const [fetchedClasses, fetchedStudents, fetchedSubjects, fetchedSettings, fetchedHistory] = await Promise.all([
             dataService.getClasses(),
             dataService.getStudents(),
             dataService.getSubjects(),
-            dataService.getAppSettings()
+            dataService.getAppSettings(),
+            dataService.getAttendanceRecords()
           ]);
           setClasses(fetchedClasses);
-          setStudents(fetchedStudents);
           setSubjects(fetchedSubjects);
           setAppSettings(prev => ({ ...prev, ...fetchedSettings }));
+          setAttendanceHistory(fetchedHistory);
+
+          // Calculate stats based on history
+          const stats: Record<string, { absent: number, total: number, minutesLost: number }> = {};
+          fetchedHistory.forEach(rec => {
+            if (!stats[rec.studentId]) stats[rec.studentId] = { absent: 0, total: 0, minutesLost: 0 };
+            stats[rec.studentId].total += 1;
+
+            if (rec.status === AttendanceStatus.ABSENT) {
+              stats[rec.studentId].absent += 1;
+              stats[rec.studentId].minutesLost += (rec.sessionDuration || 60);
+            } else if (rec.status === AttendanceStatus.LATE) {
+              stats[rec.studentId].minutesLost += (rec.minutesLate || 0);
+            }
+          });
+
+          const studentsWithStats = fetchedStudents.map(s => {
+            const sStats = stats[s.id] || { absent: 0, total: 0, minutesLost: 0 };
+            const risk = sStats.total > 0 ? (sStats.absent / sStats.total) * 100 : 0;
+            return {
+              ...s,
+              absenceCount: sStats.absent,
+              absenceMinutes: sStats.minutesLost,
+              riskScore: Math.min(100, Math.round(risk))
+            };
+          });
+          setStudents(studentsWithStats);
 
           // If admin, fetch users map
           if (auth.currentUser?.role === 'admin') {

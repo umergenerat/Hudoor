@@ -243,6 +243,26 @@ export const dataService = {
         if (error) throw error;
     },
 
+    async getAttendanceRecords(): Promise<AttendanceRecord[]> {
+        const { data, error } = await supabase
+            .from('attendance_records')
+            .select('*');
+
+        if (error) throw error;
+
+        return (data || []).map(r => ({
+            id: r.id,
+            studentId: r.student_id,
+            date: r.date,
+            status: r.status,
+            minutesLate: r.minutes_late,
+            notes: r.notes,
+            source: r.source,
+            subject: r.subject,
+            sessionDuration: r.session_duration
+        }));
+    },
+
     // Subjects
     async getSubjects(): Promise<string[]> {
         const { data, error } = await supabase
