@@ -5,25 +5,39 @@ import { Users, Clock, AlertTriangle, Calendar, X, TrendingUp, Phone, MessageSqu
 import { Language, DashboardMetrics, Student, AttendanceRecord, AttendanceStatus, AppSettings } from '../types';
 import { TRANSLATIONS } from '../constants';
 
+import { ClassGroup } from '../types';
+
 interface DashboardProps {
   lang: Language;
   students: Student[];
+  classes?: ClassGroup[];
   attendanceHistory: AttendanceRecord[];
   appSettings?: AppSettings;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ lang, students, attendanceHistory, appSettings }) => {
+const Dashboard: React.FC<DashboardProps> = ({ lang, students, classes = [], attendanceHistory, appSettings }) => {
   const t = (key: string) => TRANSLATIONS[key][lang];
   const dir = lang === Language.AR ? 'rtl' : 'ltr';
 
   // Student Detail Modal State
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
 
   const { history, metrics, riskStudents } = useMemo(() => {
+    // 0. Filter Data based on Selected Class
+    let filteredStudents = students;
+    let filteredHistory = attendanceHistory;
+
+    if (selectedClassId) {
+      filteredStudents = students.filter(s => s.classId === selectedClassId);
+      const studentIds = new Set(filteredStudents.map(s => s.id));
+      filteredHistory = attendanceHistory.filter(r => studentIds.has(r.studentId));
+    }
+
     // 1. Process History for Charts
     const groupedByDate: Record<string, { date: string; present: number; absent: number; late: number; total: number }> = {};
 
-    attendanceHistory.forEach(record => {
+    filteredHistory.forEach(record => {
       const date = record.date;
       if (!groupedByDate[date]) {
         groupedByDate[date] = { date, present: 0, absent: 0, late: 0, total: 0 };
@@ -45,15 +59,15 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, students, attendanceHistory
     }));
 
     // 2. Calculate Metrics
-    const totalRecords = attendanceHistory.length;
+    const totalRecords = filteredHistory.length;
     let totalPresent = 0;
     let totalLateMinutes = 0;
     let totalAbsences = 0;
 
     const studentStats: Record<string, { total: number; absent: number }> = {};
-    students.forEach(s => studentStats[s.id] = { total: 0, absent: 0 });
+    filteredStudents.forEach(s => studentStats[s.id] = { total: 0, absent: 0 });
 
-    attendanceHistory.forEach(record => {
+    filteredHistory.forEach(record => {
       if (record.status === AttendanceStatus.PRESENT || record.status === AttendanceStatus.LATE) {
         totalPresent++;
       }
@@ -82,7 +96,7 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, students, attendanceHistory
         activeStudentsCount++;
         const rate = stats.absent / stats.total;
         if (rate > 0.1) {
-          const student = students.find(s => s.id === id);
+          const student = filteredStudents.find(s => s.id === id);
           if (student) highRiskList.push(student);
         }
       }
@@ -94,13 +108,13 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, students, attendanceHistory
       history: formattedHistory,
       riskStudents: highRiskList,
       metrics: {
-        totalStudents: students.length,
+        totalStudents: filteredStudents.length,
         dailyAttendanceRate: parseFloat(attendanceRate.toFixed(1)),
         chronicAbsenteeism: parseFloat(chronicAbsenteeismRate.toFixed(1)),
         lostInstructionalTime: totalLateMinutes
       }
     };
-  }, [students, attendanceHistory]);
+  }, [students, attendanceHistory, selectedClassId]);
 
   const Card = ({ title, value, icon: Icon, color, subtext }: any) => (
     <div className="bg-white p-6 rounded-xl shadow border border-slate-200 flex items-center justify-between transition-all hover:shadow-lg hover:border-slate-300">
@@ -258,8 +272,8 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, students, attendanceHistory
                       <span className="text-slate-500 font-bold">| {rec.subject || 'General'}</span>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-xs font-bold border ${rec.status === AttendanceStatus.PRESENT ? 'bg-green-50 text-green-700 border-green-200' :
-                        rec.status === AttendanceStatus.ABSENT ? 'bg-red-50 text-red-700 border-red-200' :
-                          'bg-yellow-50 text-yellow-700 border-yellow-200'
+                      rec.status === AttendanceStatus.ABSENT ? 'bg-red-50 text-red-700 border-red-200' :
+                        'bg-yellow-50 text-yellow-700 border-yellow-200'
                       }`}>{rec.status}</span>
                   </div>
                 )) : (
@@ -281,6 +295,26 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, students, attendanceHistory
 
   return (
     <div className="space-y-6 animate-fade-in pb-10" dir={dir}>
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="p-2 bg-slate-50 text-slate-500 rounded-lg"><Calendar size={20} /></div>
+          <h3 className="font-bold text-slate-700">{t('dashboard')}</h3>
+        </div>
+
+        <div className="w-full md:w-64">
+          <select
+            value={selectedClassId}
+            onChange={(e) => setSelectedClassId(e.target.value)}
+            className="w-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none text-slate-900 font-bold shadow-sm cursor-pointer"
+          >
+            <option value="">{t('allClasses')}</option>
+            {classes.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card

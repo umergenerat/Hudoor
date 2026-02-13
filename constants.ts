@@ -249,6 +249,11 @@ export const TRANSLATIONS: TranslationDictionary = {
     [Language.EN]: 'Search (Name, Code, Phone)...',
     [Language.FR]: 'Recherche (Nom, Code, Tél)...'
   },
+  allClasses: {
+    [Language.AR]: 'كل الأقسام',
+    [Language.EN]: 'All Classes',
+    [Language.FR]: 'Toutes les classes'
+  },
   // New Translations for Academic Configuration
   academicConfig: {
     [Language.AR]: 'التهيئة البيداغوجية',

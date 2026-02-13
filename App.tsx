@@ -403,6 +403,7 @@ const App: React.FC = () => {
               <Dashboard
                 lang={lang}
                 students={students}
+                classes={isAdmin ? classes : classes.filter(c => auth.currentUser?.assignedClassIds.includes(c.id))}
                 attendanceHistory={attendanceHistory}
                 appSettings={appSettings}
               />
