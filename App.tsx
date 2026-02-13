@@ -458,6 +458,19 @@ const App: React.FC = () => {
                 userRole={auth.currentUser?.role}
                 onSaveAttendance={handleSaveAttendance}
                 onDeleteSession={handleDeleteSession}
+                onDeleteRecord={async (recordId) => {
+                  try {
+                    await dataService.deleteAttendanceRecord(recordId);
+                    setAttendanceHistory(prev => {
+                      const updated = prev.filter(r => r.id !== recordId);
+                      setTimeout(() => updateStudentStats(updated), 0);
+                      return updated;
+                    });
+                  } catch (e) {
+                    console.error("Delete failed", e);
+                    alert("Failed to delete record");
+                  }
+                }}
               />
             )}
 

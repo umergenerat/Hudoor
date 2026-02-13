@@ -226,6 +226,7 @@ export const dataService = {
     // Attendance
     async saveAttendanceRecords(records: Omit<AttendanceRecord, 'id'>[]): Promise<void> {
         const dbRecords = records.map(r => ({
+            id: (r as any).id, // If ID exists, include it for upsert
             student_id: r.studentId,
             date: r.date,
             status: r.status,
@@ -236,9 +237,19 @@ export const dataService = {
             session_duration: r.sessionDuration
         }));
 
+        // Use upsert to handle both inserts and updates
         const { error } = await supabase
             .from('attendance_records')
-            .insert(dbRecords);
+            .upsert(dbRecords, { onConflict: 'id' });
+
+        if (error) throw error;
+    },
+
+    async deleteAttendanceRecord(id: string): Promise<void> {
+        const { error } = await supabase
+            .from('attendance_records')
+            .delete()
+            .eq('id', id);
 
         if (error) throw error;
     },

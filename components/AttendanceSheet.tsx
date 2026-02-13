@@ -13,9 +13,10 @@ interface AttendanceSheetProps {
   userRole?: string; // Added to distinguish Admin vs Teacher
   onSaveAttendance: (records: AttendanceRecord[]) => void;
   onDeleteSession: (classId: string, date: string) => void;
+  onDeleteRecord?: (recordId: string) => void;
 }
 
-const AttendanceSheet: React.FC<AttendanceSheetProps> = ({ students, classes, subjects, existingHistory, lang, userRole, onSaveAttendance, onDeleteSession }) => {
+const AttendanceSheet: React.FC<AttendanceSheetProps> = ({ students, classes, subjects, existingHistory, lang, userRole, onSaveAttendance, onDeleteSession, onDeleteRecord }) => {
   const t = (key: string) => TRANSLATIONS[key][lang];
   const dir = lang === Language.AR ? 'rtl' : 'ltr';
 
@@ -386,7 +387,7 @@ const AttendanceSheet: React.FC<AttendanceSheetProps> = ({ students, classes, su
 
                       {/* Status Segmented Control */}
                       <td className="p-4 md:p-5">
-                        <div className="flex items-center justify-center gap-2 md:gap-4">
+                        <div className="flex items-center justify-start gap-4">
                           <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shadow-inner w-full max-w-md">
                             {[
                               { s: AttendanceStatus.PRESENT, label: t('present'), color: 'bg-green-600', icon: CheckCircle },
@@ -412,6 +413,29 @@ const AttendanceSheet: React.FC<AttendanceSheetProps> = ({ students, classes, su
                               );
                             })}
                           </div>
+
+                          {/* Delete Record Button */}
+                          {record && onDeleteRecord && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(lang === Language.AR ? 'حذف هذا السجل؟' : 'Delete this record?')) {
+                                  onDeleteRecord(record.id);
+                                  // Optimistic update
+                                  setRecords(prev => {
+                                    const newRecs = { ...prev };
+                                    delete newRecs[student.id];
+                                    return newRecs;
+                                  });
+                                }
+                              }}
+                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors ml-2"
+                              title={lang === Language.AR ? 'حذف السجل' : 'Delete Record'}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+
 
                           {/* Dynamic Late Input */}
                           {currentStatus === AttendanceStatus.LATE && (
