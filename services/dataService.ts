@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { ClassGroup, Student, AttendanceRecord } from '../types';
+import { ClassGroup, Student, AttendanceRecord, AppSettings } from '../types';
 
 export const dataService = {
     // Classes
@@ -278,5 +278,66 @@ export const dataService = {
             .eq('name', name);
 
         if (error) throw error;
+    },
+
+    // App Settings
+    async getAppSettings(): Promise<AppSettings> {
+        const { data, error } = await supabase
+            .from('app_settings')
+            .select('*')
+            .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "Relation not found" or "No rows found"
+            // console.warn("Error fetching settings:", error); 
+            // We can ignore if table doesn't exist or is empty for now, return defaults
+        }
+
+        if (data) {
+            return {
+                schoolName: data.school_name,
+                lateThreshold: data.late_threshold,
+                emailAlerts: data.email_alerts,
+                smsAlerts: data.sms_alerts,
+                subjectConfigs: data.subject_configs || {}
+            };
+        }
+
+        // Return defaults if not found
+        return {
+            schoolName: "ISTA-TATA",
+            lateThreshold: 15,
+            emailAlerts: true,
+            smsAlerts: false,
+            subjectConfigs: {}
+        };
+    },
+
+    async updateAppSettings(settings: AppSettings): Promise<void> {
+        // Check if row exists
+        const { data: existing } = await supabase
+            .from('app_settings')
+            .select('id')
+            .single();
+
+        const dbSettings = {
+            school_name: settings.schoolName,
+            late_threshold: settings.lateThreshold,
+            email_alerts: settings.emailAlerts,
+            sms_alerts: settings.smsAlerts,
+            subject_configs: settings.subjectConfigs
+        };
+
+        if (existing) {
+            const { error } = await supabase
+                .from('app_settings')
+                .update(dbSettings)
+                .eq('id', existing.id);
+            if (error) throw error;
+        } else {
+            const { error } = await supabase
+                .from('app_settings')
+                .insert([dbSettings]);
+            if (error) throw error;
+        }
     }
 };

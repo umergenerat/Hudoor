@@ -95,14 +95,16 @@ const App: React.FC = () => {
     if (auth.isAuthenticated) {
       const loadData = async () => {
         try {
-          const [fetchedClasses, fetchedStudents, fetchedSubjects] = await Promise.all([
+          const [fetchedClasses, fetchedStudents, fetchedSubjects, fetchedSettings] = await Promise.all([
             dataService.getClasses(),
             dataService.getStudents(),
-            dataService.getSubjects()
+            dataService.getSubjects(),
+            dataService.getAppSettings()
           ]);
           setClasses(fetchedClasses);
           setStudents(fetchedStudents);
           setSubjects(fetchedSubjects);
+          setAppSettings(prev => ({ ...prev, ...fetchedSettings }));
 
           // If admin, fetch users map
           if (auth.currentUser?.role === 'admin') {
@@ -120,6 +122,16 @@ const App: React.FC = () => {
       loadData();
     }
   }, [auth.isAuthenticated]);
+
+  const handleUpdateAppSettings = async (newSettings: AppSettings) => {
+    setAppSettings(newSettings);
+    try {
+      await dataService.updateAppSettings(newSettings);
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      alert("Failed to save settings to database");
+    }
+  };
 
   const handleInstallClick = () => {
     if (deferredPrompt) {
@@ -445,7 +457,7 @@ const App: React.FC = () => {
                 onUpdateStudents={setStudents}
                 onUpdateClasses={setClasses}
                 onUpdateSubjects={setSubjects}
-                onUpdateAppSettings={setAppSettings}
+                onUpdateAppSettings={handleUpdateAppSettings}
                 onUpdateUsers={(updatedUsers) => {
                   setUsers(updatedUsers);
                   // Check if current logged in user was updated
