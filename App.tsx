@@ -438,15 +438,7 @@ const App: React.FC = () => {
           </header>
 
           <div className="animate-fade-in">
-            {currentView === 'dashboard' && (
-              <Dashboard
-                lang={lang}
-                students={students}
-                classes={isAdmin ? classes : classes.filter(c => auth.currentUser?.assignedClassIds.includes(c.id))}
-                attendanceHistory={attendanceHistory}
-                appSettings={appSettings}
-              />
-            )}
+
 
             {currentView === 'attendance' && (
               <AttendanceSheet
@@ -480,36 +472,31 @@ const App: React.FC = () => {
                 students={students}
                 classes={isAdmin ? classes : classes.filter(c => auth.currentUser?.assignedClassIds.includes(c.id))}
                 subjects={isAdmin ? subjects : subjects.filter(s => auth.currentUser?.assignedSubjects.includes(s))}
-                apiKey={appSettings.apiKey}
-                onSaveToSystem={handleSaveAttendance}
-              />
-            )}
-
-            {currentView === 'settings' && isAdmin && (
-              <Settings
-                lang={lang}
-                students={students}
-                classes={classes}
-                subjects={subjects}
-                appSettings={appSettings}
-                users={users}
-                currentUser={auth.currentUser} // Pass current logged in user
-                onUpdateStudents={setStudents}
-                onUpdateClasses={setClasses}
-                onUpdateSubjects={setSubjects}
-                onUpdateAppSettings={handleUpdateAppSettings}
-                onUpdateUsers={(updatedUsers) => {
-                  setUsers(updatedUsers);
-                  // Check if current logged in user was updated
-                  if (auth.currentUser) {
-                    const updatedCurrentUser = updatedUsers.find(u => u.id === auth.currentUser!.id);
-                    if (updatedCurrentUser) {
-                      setAuth(prev => ({ ...prev, currentUser: updatedCurrentUser }));
-                    }
-                  }
-                }}
-              />
-            )}
+                {currentView === 'settings' && isAdmin && (
+                  <Settings
+                    lang={lang}
+                    students={students}
+                    classes={classes}
+                    subjects={subjects}
+                    appSettings={appSettings}
+                    users={users}
+                    currentUser={auth.currentUser} // Pass current logged in user
+                    onUpdateStudents={setStudents}
+                    onUpdateClasses={setClasses}
+                    onUpdateSubjects={setSubjects}
+                    onUpdateAppSettings={handleUpdateAppSettings}
+                    onUpdateUsers={(updatedUsers) => {
+                      setUsers(updatedUsers);
+                      // Check if current logged in user was updated
+                      if (auth.currentUser) {
+                        const updatedCurrentUser = updatedUsers.find(u => u.id === auth.currentUser!.id);
+                        if (updatedCurrentUser) {
+                          setAuth(prev => ({ ...prev, currentUser: updatedCurrentUser }));
+                        }
+                      }
+                    }}
+                  />
+                )}
           </div>
         </div>
 

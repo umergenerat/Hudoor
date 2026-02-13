@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
-import { Users, Clock, AlertTriangle, Calendar, X, TrendingUp, Phone, MessageSquare, MessageCircle, AlertCircle } from 'lucide-react';
+import { Users, Clock, AlertTriangle, Calendar, X, TrendingUp, Phone, MessageSquare, MessageCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { Language, DashboardMetrics, Student, AttendanceRecord, AttendanceStatus, AppSettings } from '../types';
 import { TRANSLATIONS } from '../constants';
 
@@ -11,11 +11,11 @@ interface DashboardProps {
   lang: Language;
   students: Student[];
   classes?: ClassGroup[];
-  attendanceHistory: AttendanceRecord[];
-  appSettings?: AppSettings;
+  onUpdateRecord: (id: string, newStatus: AttendanceStatus) => Promise<void>;
+  onDeleteRecord: (id: string) => Promise<void>;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ lang, students, classes = [], attendanceHistory, appSettings }) => {
+const Dashboard: React.FC<DashboardProps> = ({ lang, students, classes = [], attendanceHistory, appSettings, onUpdateRecord, onDeleteRecord }) => {
   const t = (key: string) => TRANSLATIONS[key][lang];
   const dir = lang === Language.AR ? 'rtl' : 'ltr';
 
@@ -266,15 +266,47 @@ const Dashboard: React.FC<DashboardProps> = ({ lang, students, classes = [], att
               <h4 className="font-bold text-slate-900 border-b border-slate-200 pb-2 mb-3 text-lg">Recent Activity</h4>
               <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
                 {studentHistory.length > 0 ? studentHistory.map(rec => (
-                  <div key={rec.id} className="flex justify-between items-center text-sm p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <div className="flex gap-2">
+                  <div key={rec.id} className="flex justify-between items-center text-sm p-3 bg-slate-50 rounded-lg border border-slate-200 group hover:border-slate-300 transition-all">
+                    <div className="flex gap-2 items-center">
                       <span className="text-slate-700 font-mono font-bold">{rec.date}</span>
-                      <span className="text-slate-500 font-bold">| {rec.subject || 'General'}</span>
+                      <span className="text-slate-300">|</span>
+                      <span className="text-slate-500 font-bold">{rec.subject || 'General'}</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold border ${rec.status === AttendanceStatus.PRESENT ? 'bg-green-50 text-green-700 border-green-200' :
-                      rec.status === AttendanceStatus.ABSENT ? 'bg-red-50 text-red-700 border-red-200' :
-                        'bg-yellow-50 text-yellow-700 border-yellow-200'
-                      }`}>{rec.status}</span>
+                    <div className="flex items-center gap-2">
+                      {/* Status Dropdown / Cycle */}
+                      <select
+                        value={rec.status}
+                        onChange={(e) => {
+                          const newStatus = e.target.value as AttendanceStatus;
+                          if (confirm(lang === Language.AR ? 'تغيير الحالة؟' : 'Change status?')) {
+                            onUpdateRecord(rec.id, newStatus);
+                          }
+                        }}
+                        className={`px-2 py-0.5 rounded text-xs font-bold border cursor-pointer outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 ${rec.status === AttendanceStatus.PRESENT ? 'bg-green-50 text-green-700 border-green-200' :
+                          rec.status === AttendanceStatus.ABSENT ? 'bg-red-50 text-red-700 border-red-200' :
+                            rec.status === AttendanceStatus.LATE ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                              'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}
+                      >
+                        <option value={AttendanceStatus.PRESENT}>{t('present')}</option>
+                        <option value={AttendanceStatus.ABSENT}>{t('absent')}</option>
+                        <option value={AttendanceStatus.LATE}>{t('late')}</option>
+                        <option value={AttendanceStatus.EXCUSED}>{t('excused')}</option>
+                      </select>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => {
+                          if (confirm(lang === Language.AR ? 'حذف هذا السجل؟' : 'Delete this record?')) {
+                            onDeleteRecord(rec.id);
+                          }
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+                        title={lang === Language.AR ? 'حذف' : 'Delete'}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 )) : (
                   <p className="text-slate-500 text-sm italic font-medium">No records found.</p>
