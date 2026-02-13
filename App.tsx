@@ -187,18 +187,22 @@ const App: React.FC = () => {
 
   // Recalculate Risk Scores and Absence Counts
   const updateStudentStats = (history: AttendanceRecord[]) => {
-    const stats: Record<string, { absent: number, total: number }> = {};
+    const stats: Record<string, { absent: number, total: number, minutesLost: number }> = {};
 
     history.forEach(rec => {
-      if (!stats[rec.studentId]) stats[rec.studentId] = { absent: 0, total: 0 };
+      if (!stats[rec.studentId]) stats[rec.studentId] = { absent: 0, total: 0, minutesLost: 0 };
       stats[rec.studentId].total += 1;
+
       if (rec.status === AttendanceStatus.ABSENT) {
         stats[rec.studentId].absent += 1;
+        stats[rec.studentId].minutesLost += (rec.sessionDuration || 60);
+      } else if (rec.status === AttendanceStatus.LATE) {
+        stats[rec.studentId].minutesLost += (rec.minutesLate || 0);
       }
     });
 
     setStudents(prevStudents => prevStudents.map(s => {
-      const sStats = stats[s.id] || { absent: 0, total: 0 };
+      const sStats = stats[s.id] || { absent: 0, total: 0, minutesLost: 0 };
       // Simple Risk Algorithm: (Absences / Total Days) * 100, heavily weighted
       // Or just raw count for simplicity in this demo
       const risk = sStats.total > 0 ? (sStats.absent / sStats.total) * 100 : 0;
@@ -206,6 +210,7 @@ const App: React.FC = () => {
       return {
         ...s,
         absenceCount: sStats.absent,
+        absenceMinutes: sStats.minutesLost,
         riskScore: Math.min(100, Math.round(risk))
       };
     }));
@@ -410,6 +415,7 @@ const App: React.FC = () => {
                 classes={isAdmin ? classes : classes.filter(c => auth.currentUser?.assignedClassIds.includes(c.id))}
                 subjects={isAdmin ? subjects : subjects.filter(s => auth.currentUser?.assignedSubjects.includes(s))}
                 existingHistory={attendanceHistory}
+                userRole={auth.currentUser?.role}
                 onSaveAttendance={handleSaveAttendance}
                 onDeleteSession={handleDeleteSession}
               />

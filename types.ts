@@ -55,6 +55,7 @@ export interface Student {
   trainingType?: string;
   stream?: string;
   cef?: string;
+  absenceMinutes?: number; // Total minutes lost (absent + late)
 }
 
 export interface ClassGroup {

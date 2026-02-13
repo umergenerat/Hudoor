@@ -214,6 +214,16 @@ export const TRANSLATIONS: TranslationDictionary = {
     [Language.EN]: 'Records saved successfully',
     [Language.FR]: 'Enregistrements sauvegardés avec succès'
   },
+  durationHours: {
+    [Language.AR]: 'المدة (ساعات)',
+    [Language.EN]: 'Duration (Hours)',
+    [Language.FR]: 'Durée (Heures)'
+  },
+  hours: {
+    [Language.AR]: 'ساعات',
+    [Language.EN]: 'hours',
+    [Language.FR]: 'heures'
+  },
   reviewData: {
     [Language.AR]: 'مراجعة وتعديل البيانات',
     [Language.EN]: 'Review & Edit Data',
@@ -414,10 +424,10 @@ export const MOCK_CLASSES: ClassGroup[] = [
   { id: 'c1', name: 'GE101', grade: '1A' },
   { id: 'c2', name: 'GE102', grade: '1A' },
   { id: 'c3', name: 'AA101', grade: '1A' },
-   { id: 'c4', name: 'AA102', grade: '1A' },
+  { id: 'c4', name: 'AA102', grade: '1A' },
   { id: 'c5', name: 'EI101', grade: '1A' },
   { id: 'c6', name: 'RVA101', grade: '1A' },
-   { id: 'c7', name: 'MEI101', grade: '1A' },
+  { id: 'c7', name: 'MEI101', grade: '1A' },
 ];
 
 export const MOCK_SUBJECTS: string[] = [
